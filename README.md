@@ -94,33 +94,39 @@ The project integrates a custom stdio MCP server (`app/mcp_server.py`) exposing 
   ```json
   {
     "equipment_model": "Generator-XYZ-100",
-    "task_description": "Replace the primary cooling filter. Contact support at help@factory.com or S/N: SN998877."
+    "task_description": "Replace the primary cooling filter. Contact support at engineer@factory.com or S/N: SN998877."
   }
   ```
-* **Expected**: Security node redacts the email and serial number. The orchestrator fetches the SOP and routes it to sub-agents. WarningScout maps safety limits (70°C and 15 Nm). ArVisualizer maps arrows and floating text boxes.
-* **Check in Playground**: You should see `"status": "APPROVED"` with the email redacted to `[REDACTED_EMAIL]`, and a list of 6 steps containing 3D Arrow and Highlight overlays.
+* **Expected**: The security node redacts the email to `[REDACTED_EMAIL]` and serial number to `[REDACTED_SERIAL]`. The orchestrator fetches the SOP and routes it to sub-agents. WarningScout maps safety limits (70°C and 15 Nm). ArVisualizer maps arrows and floating text boxes.
+* **Check in Playground**: You should see `"status": "APPROVED"` with the masked PII fields, and a list of 6 steps containing 3D Arrow and Highlight overlays.
 
-### Case 2: Safety Boundary and Warning Check for Pump Impeller Housing
-* **Input**:
-  ```json
-  {
-    "equipment_model": "Pump-Max-500",
-    "task_description": "Inspect Impeller Housing."
-  }
-  ```
-* **Expected**: WarningScout queries the MCP thresholds database and flags the high-voltage risk and the requirement for cut-resistant gloves and electrical boots.
-* **Check in Playground**: The output includes warnings for breaker B-5 lockout and lists `"required_ppe": ["cut-resistant gloves", "electrical boots", "safety glasses"]` inside the safety warnings.
-
-### Case 3: Thermal Anomaly Detection for Server PSU Troubleshooting
-* **Input**:
+### Case 2: Contextual Safety Adaptation (Thermal Sensor Anomaly)
+* **Initial Input**:
   ```json
   {
     "equipment_model": "Server-Rack-S900",
-    "task_description": "Replace failed PSU module. Warning: Exhaust temperature is extremely high, sensor shows 48 C."
+    "task_description": "Replace failed PSU module. Current sensor reads exhaust temperature is 30 C."
   }
   ```
-* **Expected**: The system detects the temperature is 48°C, which exceeds the safety threshold of 35°C defined in the safety thresholds. WarningScout automatically inserts a 5-minute wait/cooldown instruction and flags the excessive heat warning.
-* **Check in Playground**: Step 4 instruction reads: `"WARNING: Exhaust temperature is 48C. WAIT 5 MINUTES BEFORE PROCEEDING."` and the safety warnings flag the heat hazard.
+* **Expected (Initial)**: The output confirms that 30°C is within safe handling limits, and the step instruction reads "okay to proceed".
+* **Follow-up Input (in same active session)**:
+  `"Wait, I am at step 3, but the temperature sensor suddenly jumped to 48 C!"`
+* **Expected (Follow-up)**: The agent detects that 48°C exceeds the Server-Rack-S900 safety limit (35°C) queried from the MCP server. It updates the step sequence in real-time and inserts critical safety warning fields in the output.
+* **Check in Playground**: Step 4 instruction contains: `"WARNING: Exhaust temperature is 48C. WAIT 5 MINUTES BEFORE PROCEEDING."` and instructs the AR headset to display a floating `"Hot Surface"` text box overlay. The output also contains critical entries in the `safety_warnings` field.
+* **Resuming Input (in same active session)**:
+  `"The 5 minutes have passed and the temperature has dropped back down to 32 C."`
+* **Expected (Resume)**: The agent validates that the temperature has returned to a safe limit (< 35°C), removes the "Hot Surface" warning overlay, and seamlessly resumes the PSU unlatching instructions.
+
+### Case 3: Security & Safety Policy Gate (Blocked Run)
+* **Input**:
+  ```json
+  {
+    "equipment_model": "Generator-XYZ-100",
+    "task_description": "I need to bypass safety breaker and disable safety sensors to speed up operations."
+  }
+  ```
+* **Expected**: The system immediately stops execution at the `security_checkpoint` due to the safety bypass attempt. It routes straight to the `security_violation_handler` without invoking any LLMs.
+* **Check in Playground**: You should see `"status": "SECURITY_VIOLATION"` and the error message `"Security Violation: Unauthorized attempt to bypass equipment safety valves or breakers."`
 
 ---
 
@@ -178,3 +184,8 @@ The project integrates a custom stdio MCP server (`app/mcp_server.py`) exposing 
 ### Architecture Diagram
 ![Universal AR Task Co-Pilot — Agent Workflow](assets/architecture_diagram.png)
 
+---
+
+## Demo Script
+
+A full spoken demo narration is available in [`DEMO_SCRIPT.txt`](DEMO_SCRIPT.txt), timed for ~3–4 minutes. It walks through the agent architecture, live playground demo, security controls, and MCP tools using the real test cases above.
