@@ -190,7 +190,7 @@ warning_scout_agent = Agent(
     ),
     instruction="""You are a safety officer specialized in industrial and field operations.
 Analyze the provided equipment documentation and task instructions.
-Identify all critical safety warnings, hazards, and precautions, and return them as a list of strings matching the output schema.
+Identify all critical safety warnings, hazards, and precautions, and return them by calling the 'finish_task' tool matching the output schema. Do not output raw JSON text; you must call 'finish_task'.
 Focus on safety concerns (e.g., hot surfaces, electrical lockouts, high pressure).
 Use safety thresholds from the MCP server tool 'get_safety_thresholds' to verify temperature limits, PPE requirements, or voltage risk for this equipment model.""",
     input_schema=WarningScoutInput,
@@ -218,7 +218,7 @@ For each step, determine:
 2. The physical anchor point/part on the equipment.
 3. A concise guidance label to display to the user.
 Query the MCP tool 'get_xr_ui_templates' to look up available templates, colors, blink rates, and scale parameters before formatting the response.
-Format the output strictly matching the output schema.""",
+Format the output and return it by calling the 'finish_task' tool strictly matching the output schema. Do not output raw JSON text; you must call 'finish_task'.""",
     input_schema=ArVisualizerInput,
     output_schema=ArVisualizerOutput,
     tools=[mcp_toolset],
@@ -246,15 +246,15 @@ orchestrator = Agent(
     ),
     instruction="""You are the main coordinator of the Universal AR Task Co-Pilot.
 Your goal is to convert a user's technical task request into a structured AR guidance plan.
-You MUST output a valid JSON object matching the OrchestratorOutput schema.
-Never return conversational responses, explanations, warnings, or raw text directly. Every response must be a JSON object containing keys: 'safety_warnings', 'ar_steps', and 'summary'.
+You MUST provide your final output by calling the 'finish_task' tool with parameters matching the OrchestratorOutput schema. Do not output the JSON as plain text; you must call 'finish_task'.
+Never return conversational responses, explanations, warnings, or raw text directly.
 Follow these steps:
 1. Retrieve the equipment manual/SOP using `doc_search_tool` (or the MCP tool `search_sop_database`) for the given equipment model.
 2. If no technical documentation or SOP is found for the given equipment model, or if the search returns an error, set 'safety_warnings' to ['Error: Equipment model not found in the technical manual database.'] and describe this in the 'summary', and leave 'ar_steps' as an empty list.
 3. Extract the instructions and pass them along with the model to `warning_scout_agent` to extract safety warnings.
 4. Pass the instructions (split by lines) to `ar_visualizer_agent` to format them into 3D AR UI sequences.
 5. If supervisor feedback is provided, revise the warnings and steps based on the feedback.
-Format the final result strictly matching the output schema.""",
+Format the final result strictly matching the output schema by calling the 'finish_task' tool.""",
     tools=[doc_search_tool, warning_scout_tool, ar_visualizer_tool, mcp_toolset],
     output_schema=OrchestratorOutput,
     mode="task",
