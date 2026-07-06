@@ -273,7 +273,7 @@ Format the final result strictly matching the output schema.""",
 @node(rerun_on_resume=True)
 async def orchestrator_node(ctx: Context, node_input: Any) -> Any:
     """Invokes the orchestrator Agent dynamically in task mode."""
-    return await ctx.run_node(orchestrator, node_input)
+    return await ctx.run_node(orchestrator, node_input, use_as_output=True)
 
 @node
 def security_checkpoint(ctx: Context, node_input: Any) -> str:
