@@ -184,8 +184,3 @@ The project integrates a custom stdio MCP server (`app/mcp_server.py`) exposing 
 ### Architecture Diagram
 ![Universal AR Task Co-Pilot — Agent Workflow](assets/architecture_diagram.png)
 
----
-
-## Demo Script
-
-A full spoken demo narration is available in [`DEMO_SCRIPT.txt`](DEMO_SCRIPT.txt), timed for ~3–4 minutes. It walks through the agent architecture, live playground demo, security controls, and MCP tools using the real test cases above.
